@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SDMS — Secure Document Management System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+  <nav class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <span class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 font-mono text-xs border border-emerald-500/30">AES-256-GCM</span>
+      <h1 class="text-lg font-bold tracking-tight">Secure Document Management System</h1>
+    </div>
+    <div id="nav-user" class="hidden flex items-center gap-4">
+      <span id="user-badge" class="text-sm text-slate-300"></span>
+      <button onclick="logout()" class="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-xs font-semibold">Logout</button>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto p-6">
+    <div id="alert-box" class="hidden mb-4 p-3 rounded border text-sm"></div>
+
+    <!-- AUTH VIEW -->
+    <section id="auth-section" class="grid md:grid-cols-2 gap-8 mt-8">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <h2 class="text-xl font-semibold mb-1">Sign In</h2>
+        <p class="text-xs text-slate-400 mb-4">Argon2id + Signed HttpOnly Session</p>
+        <form onsubmit="login(event)" class="space-y-4">
+          <input id="login-user" type="text" placeholder="Username" required class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm" />
+          <input id="login-pass" type="password" placeholder="Password" required class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm" />
+          <button type="submit" class="w-full py-2 rounded bg-emerald-600 hover:bg-emerald-500 font-semibold text-sm">Authenticate</button>
+        </form>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <h2 class="text-xl font-semibold mb-1">Create Account</h2>
+        <p class="text-xs text-slate-400 mb-4">Register as Standard User or Security Auditor (Admin)</p>
+        <form onsubmit="register(event)" class="space-y-3">
+          <input id="reg-user" type="text" placeholder="Username (min 3 chars)" required class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm" />
+          <input id="reg-email" type="email" placeholder="Email" required class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm" />
+          <input id="reg-pass" type="password" placeholder="Password (min 8 chars)" required class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm" />
+          <select id="reg-role" class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm">
+            <option value="user">Role: Standard User (Document Owner)</option>
+            <option value="admin">Role: Administrator (Audit Oversight Only)</option>
+          </select>
+          <button type="submit" class="w-full py-2 rounded bg-sky-600 hover:bg-sky-500 font-semibold text-sm">Register Identity</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- DASHBOARD VIEW -->
+    <section id="dashboard-section" class="hidden space-y-8">
+      <!-- Upload Bar -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold">Encrypt & Upload Document</h2>
+          <p class="text-xs text-slate-400">Encrypted with unique 256-bit DEK wrapped by Master KEK + SHA-256 integrity seal.</p>
+        </div>
+        <form onsubmit="uploadDoc(event)" class="flex items-center gap-3">
+          <input id="file-input" type="file" required class="text-xs text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded file:border-0 file:bg-slate-800 file:text-slate-200" />
+          <button type="submit" class="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold">Encrypt & Store</button>
+        </form>
+      </div>
+
+      <!-- Document Vault Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-semibold">Your Authorized Vault Documents</h2>
+          <button onclick="loadDocuments()" class="text-xs px-3 py-1 rounded bg-slate-800 hover:bg-slate-700">Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b border-slate-800 text-slate-400 text-xs uppercase">
+              <tr>
+                <th class="py-2">Document</th>
+                <th class="py-2">Owner</th>
+                <th class="py-2">Your Role</th>
+                <th class="py-2">SHA-256 Digest</th>
+                <th class="py-2">Shared With</th>
+                <th class="py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="doc-table-body" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin Audit Section -->
+      <div id="admin-panel" class="hidden bg-slate-900 border border-amber-500/30 rounded-xl p-6">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-lg font-semibold text-amber-400">Tamper-Evident Security Audit Trail</h2>
+            <p id="chain-status" class="text-xs text-slate-400 mt-1">Verifying cryptographic hash chain...</p>
+          </div>
+          <button onclick="loadAuditLogs()" class="px-3 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-xs font-semibold">Verify Chain & Refresh</button>
+        </div>
+        <div class="overflow-x-auto max-h-96">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="border-b border-slate-800 text-slate-400">
+              <tr>
+                <th class="py-2">ID</th>
+                <th class="py-2">Timestamp (UTC)</th>
+                <th class="py-2">Actor</th>
+                <th class="py-2">Action</th>
+                <th class="py-2">Status</th>
+                <th class="py-2">Details</th>
+                <th class="py-2">HMAC</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let currentUser = null;
+
+    function showAlert(msg, isError = false) {
+      const box = document.getElementById("alert-box");
+      box.textContent = msg;
+      box.className = `mb-4 p-3 rounded border text-sm ${
+        isError ? "bg-rose-950/70 border-rose-500/40 text-rose-200" : "bg-emerald-950/70 border-emerald-500/40 text-emerald-200"
+      }`;
+      box.classList.remove("hidden");
+      setTimeout(() => box.classList.add("hidden"), 6000);
+    }
+
+    async function checkSession() {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        currentUser = await res.json();
+        document.getElementById("auth-section").classList.add("hidden");
+        document.getElementById("dashboard-section").classList.remove("hidden");
+        document.getElementById("nav-user").classList.remove("hidden");
+        document.getElementById("user-badge").textContent = `${currentUser.username} (${currentUser.role.toUpperCase()})`;
+        loadDocuments();
+        if (currentUser.role === "admin") {
+          document.getElementById("admin-panel").classList.remove("hidden");
+          loadAuditLogs();
+        } else {
+          document.getElementById("admin-panel").classList.add("hidden");
+        }
+      }
+    }
+
+    async function register(e) {
+      e.preventDefault();
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("reg-user").value,
+          email: document.getElementById("reg-email").value,
+          password: document.getElementById("reg-pass").value,
+          role: document.getElementById("reg-role").value,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) showAlert("Account created! You can now sign in.");
+      else showAlert(data.detail || "Registration failed", true);
+    }
+
+    async function login(e) {
+      e.preventDefault();
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("login-user").value,
+          password: document.getElementById("login-pass").value,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert("Authenticated successfully.");
+        checkSession();
+      } else {
+        showAlert(data.detail || "Login failed", true);
+      }
+    }
+
+    async function logout() {
+      await fetch("/api/auth/logout", { method: "POST" });
+      location.reload();
+    }
+
+    async function uploadDoc(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById("file-input");
+      if (!fileInput.files.length) return;
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+      const res = await fetch("/api/documents/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert(`Encrypted & stored '${data.filename}' (SHA-256: ${data.plaintext_sha256.slice(0, 12)}...)`);
+        fileInput.value = "";
+        loadDocuments();
+      } else {
+        showAlert(data.detail || "Upload failed", true);
+      }
+    }
+
+    async function loadDocuments() {
+      const res = await fetch("/api/documents");
+      if (!res.ok) return;
+      const data = await res.json();
+      const tbody = document.getElementById("doc-table-body");
+      tbody.innerHTML = "";
+
+      if (!data.documents.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-slate-500">No documents accessible to your account.</td></tr>`;
+        return;
+      }
+
+      for (const doc of data.documents) {
+        const sharesHtml = doc.shared_with.length
+          ? doc.shared_with.map(s => `<span class="inline-flex items-center gap-1 px-2 py-0.5 mr-1 rounded bg-slate-800 text-xs">${s.username} (${s.permission}) ${doc.role === "owner" ? `<button onclick="revokeUser('${doc.id}', '${s.username}')" class="text-rose-400 hover:text-rose-300 font-bold">×</button>` : ""}</span>`).join("")
+          : `<span class="text-slate-500 text-xs">—</span>`;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="py-3 font-medium">${doc.filename}<div class="text-[10px] font-mono text-slate-500">${doc.id}</div></td>
+          <td class="py-3 text-slate-300">${doc.owner}</td>
+          <td class="py-3"><span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 text-xs uppercase">${doc.role}</span></td>
+          <td class="py-3 font-mono text-xs text-slate-400">${doc.plaintext_sha256.slice(0, 16)}...</td>
+          <td class="py-3">${sharesHtml}</td>
+          <td class="py-3 text-right space-x-2">
+            <a href="/api/documents/${doc.id}/download" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-xs">Decrypt & Download</a>
+            ${doc.role === "owner" ? `<button onclick="promptShare('${doc.id}')" class="px-2.5 py-1 rounded bg-sky-700 hover:bg-sky-600 text-xs">Share</button>` : ""}
+            ${doc.role === "owner" ? `<button onclick="deleteDoc('${doc.id}')" class="px-2.5 py-1 rounded bg-rose-700 hover:bg-rose-600 text-xs">Delete</button>` : ""}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function promptShare(docId) {
+      const username = prompt("Enter target username to share with:");
+      if (!username) return;
+      const permission = prompt("Enter permission level ('viewer' or 'editor'):", "viewer");
+      if (!permission) return;
+
+      const res = await fetch(`/api/documents/${docId}/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, permission }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert(data.message);
+        loadDocuments();
+      } else {
+        showAlert(data.detail || "Share failed", true);
+      }
+    }
+
+    async function revokeUser(docId, username) {
+      const res = await fetch(`/api/documents/${docId}/revoke`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert(data.message);
+        loadDocuments();
+      } else {
+        showAlert(data.detail || "Revoke failed", true);
+      }
+    }
+
+    async function deleteDoc(docId) {
+      if (!confirm("Permanently delete this encrypted document?")) return;
+      const res = await fetch(`/api/documents/${docId}`, { method: "DELETE" });
+      if (res.ok) {
+        showAlert("Document deleted.");
+        loadDocuments();
+      }
+    }
+
+    async function loadAuditLogs() {
+      const res = await fetch("/api/admin/audit-logs");
+      if (!res.ok) return;
+      const data = await res.json();
+      const statusEl = document.getElementById("chain-status");
+      if (data.chain_verification.valid) {
+        statusEl.innerHTML = `<span class="text-emerald-400 font-semibold">✔ CHAIN VERIFIED INTACT</span> (${data.chain_verification.total_records} records)`;
+      } else {
+        statusEl.innerHTML = `<span class="text-rose-400 font-bold">✖ TAMPER ALERT:</span> ${data.chain_verification.reason}`;
+      }
+
+      const tbody = document.getElementById("audit-table-body");
+      tbody.innerHTML = "";
+      for (const log of data.logs) {
+        const badge = log.status === "SUCCESS" ? "text-emerald-400" : log.status === "DENIED" ? "text-amber-400" : "text-rose-400 font-bold";
+        tbody.innerHTML += `
+          <tr>
+            <td class="py-1.5">${log.id}</td>
+            <td class="py-1.5 text-slate-400">${log.timestamp}</td>
+            <td class="py-1.5">${log.actor_username}</td>
+            <td class="py-1.5 text-sky-300">${log.action}</td>
+            <td class="py-1.5 ${badge}">${log.status}</td>
+            <td class="py-1.5 text-slate-300">${log.details}</td>
+            <td class="py-1.5 text-slate-500">${log.entry_hmac}</td>
+          </tr>
+        `;
+      }
+    }
+
+    checkSession();
+  </script>
+</body>
+</html>
