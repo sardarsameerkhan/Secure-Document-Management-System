@@ -1,0 +1,10 @@
+@"
+__pycache__/
+*.py[cod]
+.env
+*.db
+storage/vault/*
+!storage/vault/.gitkeep
+.venv/
+venv/
+"@ | Set-Content -Encoding utf8 .gitignore
