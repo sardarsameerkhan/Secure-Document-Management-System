@@ -3,150 +3,455 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SDMS — Secure Document Management System</title>
+  <title>VaultDocs — Enterprise Document Workspace</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
-  <nav class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex justify-between items-center">
-    <div class="flex items-center gap-3">
-      <span class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 font-mono text-xs border border-emerald-500/30">AES-256-GCM</span>
-      <h1 class="text-lg font-bold tracking-tight">Secure Document Management System</h1>
-    </div>
-    <div id="nav-user" class="hidden flex items-center gap-4">
-      <span id="user-badge" class="text-sm text-slate-300"></span>
-      <button onclick="logout()" class="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-xs font-semibold">Logout</button>
-    </div>
-  </nav>
+<body class="bg-[#F8FAFC] text-[#0F172A] antialiased selection:bg-blue-100 selection:text-blue-900">
 
-  <main class="max-w-6xl mx-auto p-6">
-    <div id="alert-box" class="hidden mb-4 p-3 rounded border text-sm"></div>
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
 
-    <!-- AUTH VIEW -->
-    <section id="auth-section" class="grid md:grid-cols-2 gap-8 mt-8">
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
-        <h2 class="text-xl font-semibold mb-1">Sign In</h2>
-        <p class="text-xs text-slate-400 mb-4">Argon2id + Signed HttpOnly Session</p>
-        <form onsubmit="login(event)" class="space-y-4">
-          <input id="login-user" type="text" placeholder="Username" required class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm" />
-          <input id="login-pass" type="password" placeholder="Password" required class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm" />
-          <button type="submit" class="w-full py-2 rounded bg-emerald-600 hover:bg-emerald-500 font-semibold text-sm">Authenticate</button>
-        </form>
+  <!-- ==================== AUTHENTICATION VIEW ==================== -->
+  <div id="auth-view" class="min-h-screen flex flex-col lg:flex-row">
+    <!-- Left Brand & Security Architecture Panel -->
+    <div class="hidden lg:flex lg:w-5/12 bg-[#0F172A] text-white p-12 flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-sm">VD</div>
+          <span class="font-semibold text-lg tracking-tight">VaultDocs</span>
+        </div>
+        <div class="mt-16">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            Zero-Trust Document Storage
+          </span>
+          <h1 class="mt-5 text-3xl font-bold tracking-tight leading-snug">
+            Confidential file sharing with cryptographic verification.
+          </h1>
+          <p class="mt-4 text-slate-400 text-sm leading-relaxed">
+            Every uploaded document is sealed with a unique 256-bit AES-GCM Data Encryption Key, isolated from metadata, and tracked in an immutable HMAC-chained ledger.
+          </p>
+        </div>
       </div>
 
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
-        <h2 class="text-xl font-semibold mb-1">Create Account</h2>
-        <p class="text-xs text-slate-400 mb-4">Register as Standard User or Security Auditor (Admin)</p>
-        <form onsubmit="register(event)" class="space-y-3">
-          <input id="reg-user" type="text" placeholder="Username (min 3 chars)" required class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm" />
-          <input id="reg-email" type="email" placeholder="Email" required class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm" />
-          <input id="reg-pass" type="password" placeholder="Password (min 8 chars)" required class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm" />
-          <select id="reg-role" class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-700 text-sm">
-            <option value="user">Role: Standard User (Document Owner)</option>
-            <option value="admin">Role: Administrator (Audit Oversight Only)</option>
-          </select>
-          <button type="submit" class="w-full py-2 rounded bg-sky-600 hover:bg-sky-500 font-semibold text-sm">Register Identity</button>
-        </form>
-      </div>
-    </section>
-
-    <!-- DASHBOARD VIEW -->
-    <section id="dashboard-section" class="hidden space-y-8">
-      <!-- Upload Bar -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="border-t border-slate-800 pt-6 grid grid-cols-2 gap-4 text-xs">
         <div>
-          <h2 class="text-lg font-semibold">Encrypt & Upload Document</h2>
-          <p class="text-xs text-slate-400">Encrypted with unique 256-bit DEK wrapped by Master KEK + SHA-256 integrity seal.</p>
+          <p class="text-slate-500 uppercase tracking-wider font-medium">Encryption</p>
+          <p class="mt-1 text-slate-200 font-mono">AES-256-GCM + AAD</p>
         </div>
-        <form onsubmit="uploadDoc(event)" class="flex items-center gap-3">
-          <input id="file-input" type="file" required class="text-xs text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded file:border-0 file:bg-slate-800 file:text-slate-200" />
-          <button type="submit" class="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold">Encrypt & Store</button>
+        <div>
+          <p class="text-slate-500 uppercase tracking-wider font-medium">Identity Hashing</p>
+          <p class="mt-1 text-slate-200 font-mono">Argon2id (RFC 9106)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sign-In / Register Form Panel -->
+    <div class="flex-1 flex items-center justify-center p-6 sm:p-12">
+      <div class="w-full max-w-md bg-white border border-slate-200 rounded-xl shadow-sm p-8">
+        <div class="flex items-center gap-2 lg:hidden mb-6">
+          <div class="w-7 h-7 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">VD</div>
+          <span class="font-semibold text-base">VaultDocs</span>
+        </div>
+
+        <!-- Auth Mode Tabs -->
+        <div class="grid grid-cols-2 bg-slate-100 p-1 rounded-lg mb-6 text-sm font-medium">
+          <button id="tab-login" onclick="switchAuthTab('login')" class="py-1.5 rounded-md bg-white text-slate-900 shadow-sm transition">
+            Sign in
+          </button>
+          <button id="tab-register" onclick="switchAuthTab('register')" class="py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition">
+            Create account
+          </button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1.5">Username</label>
+            <input id="login-user" type="text" required autocomplete="username" placeholder="e.g. sameerkhan1"
+              class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1.5">Password</label>
+            <input id="login-pass" type="password" required autocomplete="current-password" placeholder="••••••••••••"
+              class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent" />
+          </div>
+          <button type="submit" class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-sm transition">
+            Continue to Workspace
+          </button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" onsubmit="handleRegister(event)" class="hidden space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1.5">Username</label>
+            <input id="reg-user" type="text" required minlength="3" placeholder="Choose a unique username"
+              class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1.5">Work / University Email</label>
+            <input id="reg-email" type="email" required placeholder="name@nu.edu.pk"
+              class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1.5">Password (minimum 8 characters)</label>
+            <input id="reg-pass" type="password" required minlength="8" placeholder="Create a strong password"
+              class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1.5">Account Role</label>
+            <select id="reg-role" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="user">Standard Member (Upload, Share & Manage Files)</option>
+              <option value="admin">Compliance Auditor (System Audit Log Access Only)</option>
+            </select>
+            <p class="mt-1 text-[11px] text-slate-500">By separation of duties, auditors cannot decrypt private user files.</p>
+          </div>
+          <button type="submit" class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-sm transition">
+            Create Account
+          </button>
         </form>
       </div>
+    </div>
+  </div>
 
-      <!-- Document Vault Table -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-lg font-semibold">Your Authorized Vault Documents</h2>
-          <button onclick="loadDocuments()" class="text-xs px-3 py-1 rounded bg-slate-800 hover:bg-slate-700">Refresh</button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead class="border-b border-slate-800 text-slate-400 text-xs uppercase">
-              <tr>
-                <th class="py-2">Document</th>
-                <th class="py-2">Owner</th>
-                <th class="py-2">Your Role</th>
-                <th class="py-2">SHA-256 Digest</th>
-                <th class="py-2">Shared With</th>
-                <th class="py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="doc-table-body" class="divide-y divide-slate-800"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Admin Audit Section -->
-      <div id="admin-panel" class="hidden bg-slate-900 border border-amber-500/30 rounded-xl p-6">
-        <div class="flex justify-between items-center mb-4">
-          <div>
-            <h2 class="text-lg font-semibold text-amber-400">Tamper-Evident Security Audit Trail</h2>
-            <p id="chain-status" class="text-xs text-slate-400 mt-1">Verifying cryptographic hash chain...</p>
+  <!-- ==================== MAIN WORKSPACE VIEW ==================== -->
+  <div id="workspace-view" class="hidden min-h-screen flex">
+    <!-- Left Sidebar -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0">
+      <div>
+        <!-- Brand Header -->
+        <div class="h-16 px-5 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">VD</div>
+            <span class="font-semibold text-slate-900 tracking-tight">VaultDocs</span>
           </div>
-          <button onclick="loadAuditLogs()" class="px-3 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-xs font-semibold">Verify Chain & Refresh</button>
+          <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">v1.0</span>
         </div>
-        <div class="overflow-x-auto max-h-96">
-          <table class="w-full text-left text-xs font-mono">
-            <thead class="border-b border-slate-800 text-slate-400">
-              <tr>
-                <th class="py-2">ID</th>
-                <th class="py-2">Timestamp (UTC)</th>
-                <th class="py-2">Actor</th>
-                <th class="py-2">Action</th>
-                <th class="py-2">Status</th>
-                <th class="py-2">Details</th>
-                <th class="py-2">HMAC</th>
-              </tr>
-            </thead>
-            <tbody id="audit-table-body" class="divide-y divide-slate-800"></tbody>
-          </table>
+
+        <!-- Primary Upload CTA -->
+        <div class="p-4">
+          <button onclick="document.getElementById('file-picker').click()"
+            class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-sm flex items-center justify-center gap-2 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            Upload File
+          </button>
+          <input id="file-picker" type="file" class="hidden" onchange="uploadSelectedFile(this.files[0])" />
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="px-3 space-y-1 text-sm">
+          <button id="nav-all" onclick="setFilter('all')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-blue-50 text-blue-700 font-medium">
+            <span class="flex items-center gap-2.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+              All Files
+            </span>
+            <span id="count-all" class="text-xs font-mono text-slate-500">0</span>
+          </button>
+
+          <button id="nav-owned" onclick="setFilter('owned')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium">
+            <span class="flex items-center gap-2.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              My Vault
+            </span>
+            <span id="count-owned" class="text-xs font-mono text-slate-500">0</span>
+          </button>
+
+          <button id="nav-shared" onclick="setFilter('shared')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium">
+            <span class="flex items-center gap-2.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              Shared with Me
+            </span>
+            <span id="count-shared" class="text-xs font-mono text-slate-500">0</span>
+          </button>
+
+          <div id="admin-nav-group" class="hidden pt-4 mt-4 border-t border-slate-200">
+            <p class="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Compliance</p>
+            <button id="nav-audit" onclick="setFilter('audit')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                Audit Ledger
+              </span>
+            </button>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Bottom User Profile Card -->
+      <div class="p-4 border-t border-slate-200 bg-slate-50/70">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div id="user-avatar" class="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-semibold shrink-0">U</div>
+            <div class="min-w-0">
+              <p id="profile-name" class="text-sm font-medium text-slate-900 truncate">User</p>
+              <p id="profile-role" class="text-[11px] text-slate-500 uppercase tracking-wide">Member</p>
+            </div>
+          </div>
+          <button onclick="handleLogout()" title="Sign out" class="p-1.5 rounded-md text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          </button>
         </div>
       </div>
-    </section>
-  </main>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Top Search & Status Header -->
+      <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between gap-4">
+        <div class="relative w-full max-w-md">
+          <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input id="search-input" type="text" oninput="renderDocuments()" placeholder="Search files by name, owner, or UUID..."
+            class="w-full pl-9 pr-4 py-1.5 rounded-lg bg-slate-100 border border-transparent focus:bg-white focus:border-slate-300 text-sm focus:outline-none transition" />
+        </div>
+
+        <div class="flex items-center gap-3 shrink-0">
+          <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            Vault Encrypted
+          </span>
+          <button onclick="refreshAll()" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition">
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      <!-- Files Section -->
+      <main id="files-panel" class="p-6 max-w-7xl w-full mx-auto space-y-6">
+        <!-- Drag & Drop Upload Strip -->
+        <div id="dropzone"
+          ondragover="event.preventDefault(); this.classList.add('border-blue-500', 'bg-blue-50/50')"
+          ondragleave="this.classList.remove('border-blue-500', 'bg-blue-50/50')"
+          ondrop="handleDrop(event)"
+          class="border-2 border-dashed border-slate-300 bg-white rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition">
+          <div class="flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-slate-900">Drop a file here to encrypt and store in your vault</p>
+              <p class="text-xs text-slate-500">Client payload is encrypted server-side with a fresh 256-bit DEK before touching disk.</p>
+            </div>
+          </div>
+          <button onclick="document.getElementById('file-picker').click()" class="px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 shrink-0">
+            Browse Computer
+          </button>
+        </div>
+
+        <!-- Files Data Table -->
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+            <h2 id="section-title" class="text-sm font-semibold text-slate-900">All Accessible Files</h2>
+            <span id="table-summary" class="text-xs text-slate-500">0 items</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 bg-slate-50/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <th class="py-3 px-5">Name</th>
+                  <th class="py-3 px-4">Owner</th>
+                  <th class="py-3 px-4">Access</th>
+                  <th class="py-3 px-4">Size</th>
+                  <th class="py-3 px-4">Shared With</th>
+                  <th class="py-3 px-5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="docs-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+
+      <!-- Admin Audit Ledger Panel -->
+      <main id="audit-panel" class="hidden p-6 max-w-7xl w-full mx-auto space-y-5">
+        <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div>
+            <h2 class="text-base font-semibold text-slate-900">Tamper-Evident Security Audit Ledger</h2>
+            <p id="chain-banner" class="text-xs text-slate-500 mt-1">Verifying cryptographic HMAC-SHA256 hash chain...</p>
+          </div>
+          <button onclick="loadAuditLogs()" class="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition shrink-0">
+            Verify Chain & Refresh
+          </button>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div class="overflow-x-auto max-h-[32rem]">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <th class="py-3 px-4">ID</th>
+                  <th class="py-3 px-4">Timestamp (UTC)</th>
+                  <th class="py-3 px-4">Actor</th>
+                  <th class="py-3 px-4">Event</th>
+                  <th class="py-3 px-4">Outcome</th>
+                  <th class="py-3 px-4">Details</th>
+                  <th class="py-3 px-4">Chain HMAC</th>
+                </tr>
+              </thead>
+              <tbody id="audit-tbody" class="divide-y divide-slate-100 font-mono"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== SHARE & PERMISSIONS MODAL ==================== -->
+  <div id="share-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center p-4 z-40">
+    <div class="bg-white border border-slate-200 rounded-xl max-w-md w-full p-6 shadow-xl space-y-5">
+      <div class="flex items-start justify-between">
+        <div>
+          <h3 class="text-base font-semibold text-slate-900">Share Document</h3>
+          <p id="share-modal-filename" class="text-xs text-slate-500 mt-0.5 truncate max-w-xs"></p>
+        </div>
+        <button onclick="closeShareModal()" class="text-slate-400 hover:text-slate-600 text-lg leading-none">✕</button>
+      </div>
+
+      <form onsubmit="submitShare(event)" class="space-y-3">
+        <div class="flex gap-2">
+          <input id="share-username" type="text" required placeholder="Enter username (e.g. bob)"
+            class="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+          <select id="share-permission" class="px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <option value="viewer">Viewer</option>
+            <option value="editor">Editor</option>
+          </select>
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition">
+          Grant Access
+        </button>
+      </form>
+
+      <div class="border-t border-slate-200 pt-4">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5">People with access</p>
+        <div id="share-collaborators-list" class="space-y-2 max-h-40 overflow-y-auto text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== FILE DETAILS & SECURITY DRAWER ==================== -->
+  <div id="details-drawer" class="hidden fixed inset-0 bg-slate-900/30 z-40 flex justify-end" onclick="if(event.target===this) closeDrawer()">
+    <div class="bg-white w-full max-w-md h-full border-l border-slate-200 p-6 flex flex-col justify-between shadow-2xl overflow-y-auto">
+      <div class="space-y-6">
+        <div class="flex items-start justify-between border-b border-slate-200 pb-4">
+          <div class="min-w-0 pr-3">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-blue-600">Cryptographic Metadata</span>
+            <h3 id="drawer-filename" class="text-base font-semibold text-slate-900 truncate mt-0.5"></h3>
+          </div>
+          <button onclick="closeDrawer()" class="text-slate-400 hover:text-slate-600 text-lg leading-none">✕</button>
+        </div>
+
+        <div class="space-y-4 text-xs">
+          <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500 font-medium">Document UUID</span>
+              <button onclick="copyDrawerUuid()" class="text-blue-600 hover:text-blue-700 font-medium">Copy ID</button>
+            </div>
+            <p id="drawer-uuid" class="font-mono text-slate-800 break-all select-all"></p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="p-3 rounded-lg border border-slate-200">
+              <p class="text-slate-400">Owner</p>
+              <p id="drawer-owner" class="mt-1 font-medium text-slate-900"></p>
+            </div>
+            <div class="p-3 rounded-lg border border-slate-200">
+              <p class="text-slate-400">Your Permission</p>
+              <p id="drawer-role" class="mt-1 font-medium text-slate-900 uppercase"></p>
+            </div>
+            <div class="p-3 rounded-lg border border-slate-200">
+              <p class="text-slate-400">Plaintext Size</p>
+              <p id="drawer-size" class="mt-1 font-mono text-slate-900"></p>
+            </div>
+            <div class="p-3 rounded-lg border border-slate-200">
+              <p class="text-slate-400">Cipher Suite</p>
+              <p class="mt-1 font-mono text-slate-900">AES-256-GCM</p>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5">
+            <span class="text-slate-500 font-medium">Plaintext Integrity Digest (SHA-256)</span>
+            <p id="drawer-sha" class="font-mono text-[11px] text-slate-700 break-all"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-200 pt-4 flex gap-2">
+        <a id="drawer-download-btn" href="#" class="flex-1 py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-center text-xs font-medium transition">
+          Decrypt & Download
+        </a>
+        <button onclick="closeDrawer()" class="py-2.5 px-4 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden file input for Editor/Owner replacement upload -->
+  <input id="replace-picker" type="file" class="hidden" onchange="submitReplaceFile(this.files[0])" />
 
   <script>
     let currentUser = null;
+    let allDocuments = [];
+    let activeFilter = "all";
+    let activeShareDocId = null;
+    let activeReplaceDocId = null;
+    let activeDrawerUuid = null;
 
-    function showAlert(msg, isError = false) {
-      const box = document.getElementById("alert-box");
-      box.textContent = msg;
-      box.className = `mb-4 p-3 rounded border text-sm ${
-        isError ? "bg-rose-950/70 border-rose-500/40 text-rose-200" : "bg-emerald-950/70 border-emerald-500/40 text-emerald-200"
-      }`;
-      box.classList.remove("hidden");
-      setTimeout(() => box.classList.add("hidden"), 6000);
+    function notify(message, type = "info") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      const styles = type === "error"
+        ? "bg-rose-900 text-white border-rose-700"
+        : type === "success"
+        ? "bg-slate-900 text-white border-slate-700"
+        : "bg-white text-slate-900 border-slate-200";
+      toast.className = `px-4 py-3 rounded-lg border shadow-lg text-xs font-medium flex items-center justify-between gap-3 transition ${styles}`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4500);
     }
 
-    async function checkSession() {
+    function switchAuthTab(tab) {
+      const isLogin = tab === "login";
+      document.getElementById("login-form").classList.toggle("hidden", !isLogin);
+      document.getElementById("register-form").classList.toggle("hidden", isLogin);
+      document.getElementById("tab-login").className = isLogin
+        ? "py-1.5 rounded-md bg-white text-slate-900 shadow-sm transition"
+        : "py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition";
+      document.getElementById("tab-register").className = !isLogin
+        ? "py-1.5 rounded-md bg-white text-slate-900 shadow-sm transition"
+        : "py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition";
+    }
+
+    async function initApp() {
       const res = await fetch("/api/auth/me");
-      if (res.ok) {
-        currentUser = await res.json();
-        document.getElementById("auth-section").classList.add("hidden");
-        document.getElementById("dashboard-section").classList.remove("hidden");
-        document.getElementById("nav-user").classList.remove("hidden");
-        document.getElementById("user-badge").textContent = `${currentUser.username} (${currentUser.role.toUpperCase()})`;
-        loadDocuments();
-        if (currentUser.role === "admin") {
-          document.getElementById("admin-panel").classList.remove("hidden");
-          loadAuditLogs();
-        } else {
-          document.getElementById("admin-panel").classList.add("hidden");
-        }
+      if (!res.ok) return;
+      currentUser = await res.json();
+
+      document.getElementById("auth-view").classList.add("hidden");
+      document.getElementById("workspace-view").classList.remove("hidden");
+
+      document.getElementById("profile-name").textContent = currentUser.username;
+      document.getElementById("profile-role").textContent = currentUser.role === "admin" ? "Compliance Auditor" : "Standard Member";
+      document.getElementById("user-avatar").textContent = currentUser.username.slice(0, 2).toUpperCase();
+
+      if (currentUser.role === "admin") {
+        document.getElementById("admin-nav-group").classList.remove("hidden");
+      }
+
+      await loadDocuments();
+      if (currentUser.role === "admin") {
+        setFilter("audit");
       }
     }
 
-    async function register(e) {
+    async function handleRegister(e) {
       e.preventDefault();
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -159,11 +464,16 @@
         }),
       });
       const data = await res.json();
-      if (res.ok) showAlert("Account created! You can now sign in.");
-      else showAlert(data.detail || "Registration failed", true);
+      if (res.ok) {
+        notify("Account created. Please sign in.", "success");
+        switchAuthTab("login");
+        document.getElementById("login-user").value = data.username;
+      } else {
+        notify(data.detail || "Registration failed", "error");
+      }
     }
 
-    async function login(e) {
+    async function handleLogin(e) {
       e.preventDefault();
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -175,32 +485,62 @@
       });
       const data = await res.json();
       if (res.ok) {
-        showAlert("Authenticated successfully.");
-        checkSession();
+        notify(`Welcome back, ${data.username}`, "success");
+        initApp();
       } else {
-        showAlert(data.detail || "Login failed", true);
+        notify(data.detail || "Authentication failed", "error");
       }
     }
 
-    async function logout() {
+    async function handleLogout() {
       await fetch("/api/auth/logout", { method: "POST" });
       location.reload();
     }
 
-    async function uploadDoc(e) {
+    function handleDrop(e) {
       e.preventDefault();
-      const fileInput = document.getElementById("file-input");
-      if (!fileInput.files.length) return;
+      document.getElementById("dropzone").classList.remove("border-blue-500", "bg-blue-50/50");
+      if (e.dataTransfer.files.length) {
+        uploadSelectedFile(e.dataTransfer.files[0]);
+      }
+    }
+
+    async function uploadSelectedFile(file) {
+      if (!file) return;
       const formData = new FormData();
-      formData.append("file", fileInput.files[0]);
+      formData.append("file", file);
       const res = await fetch("/api/documents/upload", { method: "POST", body: formData });
       const data = await res.json();
+      document.getElementById("file-picker").value = "";
       if (res.ok) {
-        showAlert(`Encrypted & stored '${data.filename}' (SHA-256: ${data.plaintext_sha256.slice(0, 12)}...)`);
-        fileInput.value = "";
-        loadDocuments();
+        notify(`Encrypted & stored "${data.filename}"`, "success");
+        await loadDocuments();
       } else {
-        showAlert(data.detail || "Upload failed", true);
+        notify(data.detail || "Upload failed", "error");
+      }
+    }
+
+    function setFilter(filter) {
+      activeFilter = filter;
+      const navIds = ["all", "owned", "shared", "audit"];
+      for (const id of navIds) {
+        const el = document.getElementById(`nav-${id}`);
+        if (!el) continue;
+        el.className = id === filter
+          ? "w-full flex items-center justify-between px-3 py-2 rounded-lg bg-blue-50 text-blue-700 font-medium"
+          : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium";
+      }
+
+      const isAudit = filter === "audit";
+      document.getElementById("files-panel").classList.toggle("hidden", isAudit);
+      document.getElementById("audit-panel").classList.toggle("hidden", !isAudit);
+
+      if (isAudit) {
+        loadAuditLogs();
+      } else {
+        const titles = { all: "All Accessible Files", owned: "My Encrypted Vault", shared: "Shared with Me" };
+        document.getElementById("section-title").textContent = titles[filter];
+        renderDocuments();
       }
     }
 
@@ -208,57 +548,180 @@
       const res = await fetch("/api/documents");
       if (!res.ok) return;
       const data = await res.json();
-      const tbody = document.getElementById("doc-table-body");
+      allDocuments = data.documents;
+
+      document.getElementById("count-all").textContent = allDocuments.length;
+      document.getElementById("count-owned").textContent = allDocuments.filter(d => d.role === "owner").length;
+      document.getElementById("count-shared").textContent = allDocuments.filter(d => d.role !== "owner").length;
+
+      renderDocuments();
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    function renderDocuments() {
+      const query = document.getElementById("search-input").value.trim().toLowerCase();
+      let filtered = allDocuments;
+
+      if (activeFilter === "owned") filtered = filtered.filter(d => d.role === "owner");
+      if (activeFilter === "shared") filtered = filtered.filter(d => d.role !== "owner");
+
+      if (query) {
+        filtered = filtered.filter(d =>
+          d.filename.toLowerCase().includes(query) ||
+          d.owner.toLowerCase().includes(query) ||
+          d.id.toLowerCase().includes(query)
+        );
+      }
+
+      document.getElementById("table-summary").textContent = `${filtered.length} ${filtered.length === 1 ? "item" : "items"}`;
+      const tbody = document.getElementById("docs-tbody");
       tbody.innerHTML = "";
 
-      if (!data.documents.length) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-slate-500">No documents accessible to your account.</td></tr>`;
+      if (!filtered.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="py-12 text-center text-slate-400 text-sm">
+              No documents found in this view. Upload a file above to get started.
+            </td>
+          </tr>`;
         return;
       }
 
-      for (const doc of data.documents) {
-        const sharesHtml = doc.shared_with.length
-          ? doc.shared_with.map(s => `<span class="inline-flex items-center gap-1 px-2 py-0.5 mr-1 rounded bg-slate-800 text-xs">${s.username} (${s.permission}) ${doc.role === "owner" ? `<button onclick="revokeUser('${doc.id}', '${s.username}')" class="text-rose-400 hover:text-rose-300 font-bold">×</button>` : ""}</span>`).join("")
-          : `<span class="text-slate-500 text-xs">—</span>`;
+      for (const doc of filtered) {
+        const roleColors = {
+          owner: "bg-slate-100 text-slate-700 border-slate-200",
+          editor: "bg-indigo-50 text-indigo-700 border-indigo-200",
+          viewer: "bg-amber-50 text-amber-700 border-amber-200",
+        };
+        const badgeClass = roleColors[doc.role] || "bg-slate-100 text-slate-700";
+
+        const sharedCell = doc.shared_with.length
+          ? `<div class="flex flex-wrap gap-1">${doc.shared_with.map(s =>
+              `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs">
+                ${s.username} <span class="text-slate-400">(${s.permission})</span>
+                ${doc.role === "owner" ? `<button onclick="revokeAccess('${doc.id}', '${s.username}')" title="Revoke access" class="ml-0.5 text-slate-400 hover:text-rose-600 font-bold">×</button>` : ""}
+              </span>`
+            ).join("")}</div>`
+          : `<span class="text-xs text-slate-400">Private</span>`;
 
         const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50/90 transition group";
         tr.innerHTML = `
-          <td class="py-3 font-medium">${doc.filename}<div class="text-[10px] font-mono text-slate-500">${doc.id}</div></td>
-          <td class="py-3 text-slate-300">${doc.owner}</td>
-          <td class="py-3"><span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 text-xs uppercase">${doc.role}</span></td>
-          <td class="py-3 font-mono text-xs text-slate-400">${doc.plaintext_sha256.slice(0, 16)}...</td>
-          <td class="py-3">${sharesHtml}</td>
-          <td class="py-3 text-right space-x-2">
-            <a href="/api/documents/${doc.id}/download" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-xs">Decrypt & Download</a>
-            ${doc.role === "owner" ? `<button onclick="promptShare('${doc.id}')" class="px-2.5 py-1 rounded bg-sky-700 hover:bg-sky-600 text-xs">Share</button>` : ""}
-            ${doc.role === "owner" ? `<button onclick="deleteDoc('${doc.id}')" class="px-2.5 py-1 rounded bg-rose-700 hover:bg-rose-600 text-xs">Delete</button>` : ""}
+          <td class="py-3.5 px-5">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              </div>
+              <div class="min-w-0">
+                <button onclick="openDrawer('${doc.id}')" class="font-medium text-slate-900 hover:text-blue-600 text-left truncate block max-w-xs">
+                  ${doc.filename}
+                </button>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  <span class="font-mono text-[11px] text-slate-400">${doc.id}</span>
+                  <button onclick="copyText('${doc.id}')" class="text-[10px] text-slate-400 hover:text-blue-600 underline">copy</button>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 text-slate-600 text-xs">${doc.owner}</td>
+          <td class="py-3.5 px-4">
+            <span class="px-2 py-0.5 rounded-md border text-[11px] font-medium capitalize ${badgeClass}">${doc.role}</span>
+          </td>
+          <td class="py-3.5 px-4 font-mono text-xs text-slate-500">${formatBytes(doc.file_size)}</td>
+          <td class="py-3.5 px-4">${sharedCell}</td>
+          <td class="py-3.5 px-5 text-right whitespace-nowrap space-x-1.5">
+            <a href="/api/documents/${doc.id}/download"
+              class="inline-flex items-center px-2.5 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition">
+              Download
+            </a>
+            ${(doc.role === "owner" || doc.role === "editor") ? `
+              <button onclick="triggerReplace('${doc.id}')"
+                class="px-2.5 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition">
+                Replace
+              </button>` : ""}
+            ${doc.role === "owner" ? `
+              <button onclick="openShareModal('${doc.id}')"
+                class="px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-xs font-medium text-white transition">
+                Share
+              </button>
+              <button onclick="deleteDocument('${doc.id}')"
+                class="px-2.5 py-1.5 rounded-md text-xs font-medium text-rose-600 hover:bg-rose-50 transition">
+                Delete
+              </button>` : ""}
           </td>
         `;
         tbody.appendChild(tr);
       }
     }
 
-    async function promptShare(docId) {
-      const username = prompt("Enter target username to share with:");
-      if (!username) return;
-      const permission = prompt("Enter permission level ('viewer' or 'editor'):", "viewer");
-      if (!permission) return;
+    function copyText(text) {
+      navigator.clipboard.writeText(text);
+      notify("Document UUID copied to clipboard", "success");
+    }
 
-      const res = await fetch(`/api/documents/${docId}/share`, {
+    /* ---- Share Modal Logic ---- */
+    function openShareModal(docId) {
+      const doc = allDocuments.find(d => d.id === docId);
+      if (!doc) return;
+      activeShareDocId = docId;
+      document.getElementById("share-modal-filename").textContent = doc.filename;
+      document.getElementById("share-username").value = "";
+
+      const list = document.getElementById("share-collaborators-list");
+      list.innerHTML = `
+        <div class="flex items-center justify-between py-1.5">
+          <span class="font-medium text-slate-800">${doc.owner} (You)</span>
+          <span class="text-xs text-slate-400">Owner</span>
+        </div>
+      `;
+      for (const s of doc.shared_with) {
+        list.innerHTML += `
+          <div class="flex items-center justify-between py-1.5 border-t border-slate-100">
+            <div>
+              <span class="font-medium text-slate-800">${s.username}</span>
+              <span class="ml-1.5 text-xs text-slate-500 capitalize">(${s.permission})</span>
+            </div>
+            <button onclick="revokeAccess('${doc.id}', '${s.username}', true)" class="text-xs text-rose-600 hover:underline font-medium">
+              Revoke
+            </button>
+          </div>
+        `;
+      }
+      document.getElementById("share-modal").classList.remove("hidden");
+    }
+
+    function closeShareModal() {
+      document.getElementById("share-modal").classList.add("hidden");
+      activeShareDocId = null;
+    }
+
+    async function submitShare(e) {
+      e.preventDefault();
+      if (!activeShareDocId) return;
+      const username = document.getElementById("share-username").value.trim();
+      const permission = document.getElementById("share-permission").value;
+
+      const res = await fetch(`/api/documents/${activeShareDocId}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, permission }),
       });
       const data = await res.json();
       if (res.ok) {
-        showAlert(data.message);
-        loadDocuments();
+        notify(data.message, "success");
+        await loadDocuments();
+        openShareModal(activeShareDocId);
       } else {
-        showAlert(data.detail || "Share failed", true);
+        notify(data.detail || "Could not share document", "error");
       }
     }
 
-    async function revokeUser(docId, username) {
+    async function revokeAccess(docId, username, keepModalOpen = false) {
       const res = await fetch(`/api/documents/${docId}/revoke`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -266,52 +729,112 @@
       });
       const data = await res.json();
       if (res.ok) {
-        showAlert(data.message);
-        loadDocuments();
+        notify(data.message, "success");
+        await loadDocuments();
+        if (keepModalOpen) openShareModal(docId);
       } else {
-        showAlert(data.detail || "Revoke failed", true);
+        notify(data.detail || "Revocation failed", "error");
       }
     }
 
-    async function deleteDoc(docId) {
-      if (!confirm("Permanently delete this encrypted document?")) return;
+    /* ---- Replace / Update Document Logic ---- */
+    function triggerReplace(docId) {
+      activeReplaceDocId = docId;
+      document.getElementById("replace-picker").click();
+    }
+
+    async function submitReplaceFile(file) {
+      if (!file || !activeReplaceDocId) return;
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/documents/${activeReplaceDocId}/update`, { method: "PUT", body: formData });
+      const data = await res.json();
+      document.getElementById("replace-picker").value = "";
+      if (res.ok) {
+        notify(`Updated "${data.filename}" with rotated encryption key`, "success");
+        await loadDocuments();
+      } else {
+        notify(data.detail || "Update failed", "error");
+      }
+    }
+
+    async function deleteDocument(docId) {
+      if (!confirm("Permanently delete this document and purge its encrypted vault blob?")) return;
       const res = await fetch(`/api/documents/${docId}`, { method: "DELETE" });
       if (res.ok) {
-        showAlert("Document deleted.");
-        loadDocuments();
+        notify("Document permanently deleted", "success");
+        await loadDocuments();
+      } else {
+        notify("Delete failed", "error");
       }
     }
 
+    /* ---- File Details Drawer ---- */
+    function openDrawer(docId) {
+      const doc = allDocuments.find(d => d.id === docId);
+      if (!doc) return;
+      activeDrawerUuid = doc.id;
+      document.getElementById("drawer-filename").textContent = doc.filename;
+      document.getElementById("drawer-uuid").textContent = doc.id;
+      document.getElementById("drawer-owner").textContent = doc.owner;
+      document.getElementById("drawer-role").textContent = doc.role;
+      document.getElementById("drawer-size").textContent = formatBytes(doc.file_size);
+      document.getElementById("drawer-sha").textContent = doc.plaintext_sha256;
+      document.getElementById("drawer-download-btn").href = `/api/documents/${doc.id}/download`;
+      document.getElementById("details-drawer").classList.remove("hidden");
+    }
+
+    function closeDrawer() {
+      document.getElementById("details-drawer").classList.add("hidden");
+    }
+
+    function copyDrawerUuid() {
+      if (activeDrawerUuid) copyText(activeDrawerUuid);
+    }
+
+    /* ---- Admin Audit Ledger ---- */
     async function loadAuditLogs() {
       const res = await fetch("/api/admin/audit-logs");
       if (!res.ok) return;
       const data = await res.json();
-      const statusEl = document.getElementById("chain-status");
+
+      const banner = document.getElementById("chain-banner");
       if (data.chain_verification.valid) {
-        statusEl.innerHTML = `<span class="text-emerald-400 font-semibold">✔ CHAIN VERIFIED INTACT</span> (${data.chain_verification.total_records} records)`;
+        banner.innerHTML = `<span class="text-emerald-700 font-semibold">✔ Hash Chain Verified Intact</span> — ${data.chain_verification.total_records} consecutive HMAC-SHA256 entries validated.`;
       } else {
-        statusEl.innerHTML = `<span class="text-rose-400 font-bold">✖ TAMPER ALERT:</span> ${data.chain_verification.reason}`;
+        banner.innerHTML = `<span class="text-rose-700 font-bold">✖ TAMPER ALERT:</span> ${data.chain_verification.reason}`;
       }
 
-      const tbody = document.getElementById("audit-table-body");
+      const tbody = document.getElementById("audit-tbody");
       tbody.innerHTML = "";
       for (const log of data.logs) {
-        const badge = log.status === "SUCCESS" ? "text-emerald-400" : log.status === "DENIED" ? "text-amber-400" : "text-rose-400 font-bold";
+        const pill = log.status === "SUCCESS"
+          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+          : log.status === "DENIED"
+          ? "bg-amber-50 text-amber-700 border-amber-200"
+          : "bg-rose-50 text-rose-700 border-rose-200 font-bold";
+
         tbody.innerHTML += `
-          <tr>
-            <td class="py-1.5">${log.id}</td>
-            <td class="py-1.5 text-slate-400">${log.timestamp}</td>
-            <td class="py-1.5">${log.actor_username}</td>
-            <td class="py-1.5 text-sky-300">${log.action}</td>
-            <td class="py-1.5 ${badge}">${log.status}</td>
-            <td class="py-1.5 text-slate-300">${log.details}</td>
-            <td class="py-1.5 text-slate-500">${log.entry_hmac}</td>
+          <tr class="hover:bg-slate-50">
+            <td class="py-2.5 px-4 text-slate-500">#${log.id}</td>
+            <td class="py-2.5 px-4 text-slate-500 whitespace-nowrap">${log.timestamp}</td>
+            <td class="py-2.5 px-4 font-medium text-slate-800">${log.actor_username}</td>
+            <td class="py-2.5 px-4 text-blue-700">${log.action}</td>
+            <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded border text-[10px] ${pill}">${log.status}</span></td>
+            <td class="py-2.5 px-4 font-sans text-slate-700">${log.details}</td>
+            <td class="py-2.5 px-4 text-slate-400">${log.entry_hmac}</td>
           </tr>
         `;
       }
     }
 
-    checkSession();
+    async function refreshAll() {
+      await loadDocuments();
+      if (activeFilter === "audit") await loadAuditLogs();
+      notify("Workspace synced");
+    }
+
+    initApp();
   </script>
 </body>
 </html>
