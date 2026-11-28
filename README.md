@@ -143,3 +143,4 @@ DDR-03 — Storage Separation (SQLite Metadata vs. Opaque Disk Blobs): Prevents 
 DDR-04 — Separation of Duties (Admin vs. Owner): System administrators can inspect security audit logs and verify chain integrity without gaining implicit read access to user documents.
 
 DDR-05 — HMAC-SHA256 Hash-Chained Audit Ledger: Cryptographically links sequential log rows (prev_hash + current fields) so post-incident tampering or log deletion is mathematically detectable
+<img width="937" height="488" alt="image" src="https://github.com/user-attachments/assets/d84a3d01-b789-4cc5-8538-08ee4b0daa65" />
