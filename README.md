@@ -144,3 +144,4 @@ DDR-04 — Separation of Duties (Admin vs. Owner): System administrators can ins
 
 DDR-05 — HMAC-SHA256 Hash-Chained Audit Ledger: Cryptographically links sequential log rows (prev_hash + current fields) so post-incident tampering or log deletion is mathematically detectable
 <img width="937" height="488" alt="image" src="https://github.com/user-attachments/assets/d84a3d01-b789-4cc5-8538-08ee4b0daa65" />
+<img width="940" height="484" alt="image" src="https://github.com/user-attachments/assets/da9fc097-6dba-47bd-98b0-122b11a2c5ac" />
